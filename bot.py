@@ -52,19 +52,15 @@ def check_new_posts_vk():
 		feed = get_data()
 		if feed is not None:
 			entries = feed['response']
-			try:
-				tmp = entries['items'][0]['is_pinned']
-				send_new_posts(entries['items'][1:], last_id)
-			except KeyError:
-				send_new_posts(entries['items'], last_id)
+			if 'is_pinned' in entries['items'][0]:
+				wall_posts = entries['items'][1:]
+			else:
+				wall_posts = entries['items']
+			send_new_posts(wall_posts, last_id)
+			new_last_id = wall_posts[0]['id']		
 			with open(FILENAME_VK, 'wt') as file:
-				try:
-					tmp = entries['items'][0]['is_pinned']
-					file.write(str(entries['items'][1]['id']))
-					logging.info('New last_id (VK) is {!s}'.format((entries['items'][1]['id'])))
-				except KeyError:
-					file.write(str(entries['items'][0]['id']))
-					logging.info('New last_id (VK) is {!s}'.format((entries['items'][0]['id'])))
+				file.write(str(new_last_id))
+			logging.info('New last_id (VK) is {!s}'.format(new_last_id))
 	except Exception as ex:
 		logging.error('Exception of type {!s} in check_new_post():{!s}').format(type(ex).__name__,str(ex))
 		pass
