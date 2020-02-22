@@ -7,15 +7,15 @@ import json
 import os
 from time import sleep
 
-with open ('config.json') as config:
-	data = json.load(config)
-	URL_VK = data['URL_VK']
-	BOT_TOKEN = data['BOT_TOKEN']
-	CHANNEL_NAME = data['CHANNEL_NAME']
+# with open ('config.json') as config:
+# 	data = json.load(config)
+# 	URL_VK = data['URL_VK']
+# 	BOT_TOKEN = data['BOT_TOKEN']
+# 	CHANNEL_NAME = data['CHANNEL_NAME']
 
-# URL_VK = os.environ['URL_VK']
-# BOT_TOKEN = os.environ['BOT_TOKEN']
-# CHANNEL_NAME = os.environ['CHANNEL_NAME']
+URL_VK = os.environ['URL_VK']
+BOT_TOKEN = os.environ['BOT_TOKEN']
+CHANNEL_NAME = os.environ['CHANNEL_NAME']
 
 bot = telebot.TeleBot(BOT_TOKEN)
 SINGLE_RUN = False
