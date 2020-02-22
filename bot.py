@@ -7,22 +7,19 @@ import json
 import os
 from time import sleep
 
-# with open ('config.json') as config:
-# 	data = json.load(config)
-# 	URL_VK = data['URL_VK']
-# 	FILENAME_VK = data['FILENAME_VK']
-# 	BASE_POST_URL = data['BASE_POST_URL']	
-# 	BOT_TOKEN = data['BOT_TOKEN']
-# 	CHANNEL_NAME = data['CHANNEL_NAME']
+with open ('config.json') as config:
+	data = json.load(config)
+	URL_VK = data['URL_VK']
+	BOT_TOKEN = data['BOT_TOKEN']
+	CHANNEL_NAME = data['CHANNEL_NAME']
 
-URL_VK = os.environ['URL_VK']
-FILENAME_VK = os.environ['FILENAME_VK']
-BASE_POST_URL = os.environ['BASE_POST_URL']	
-BOT_TOKEN = os.environ['BOT_TOKEN']
-CHANNEL_NAME = os.environ['CHANNEL_NAME']
+# URL_VK = os.environ['URL_VK']
+# BOT_TOKEN = os.environ['BOT_TOKEN']
+# CHANNEL_NAME = os.environ['CHANNEL_NAME']
 
 bot = telebot.TeleBot(BOT_TOKEN)
 SINGLE_RUN = False
+PERIOD_CHECK_TIME = 240 # 4 min
 
 def get_data():
 	timeout = eventlet.Timeout(10)
@@ -35,39 +32,35 @@ def get_data():
 	finally:
 		timeout.cancel()
 
-def send_new_posts(items, last_id):
+def send_new_posts(items):
 	for item in items:
-		if item['id'] <= last_id:
+		if int(time.time()) - item['date'] > PERIOD_CHECK_TIME: 
 			break
-		text = item['text']
-		img_sizes = item['attachments'][0]['photo']['sizes']
-		img_url = next(x for x in img_sizes if x['type'] == 'x')['url']
-		bot.send_photo(CHANNEL_NAME, img_url)
-		bot.send_message(CHANNEL_NAME, text, disable_web_page_preview=True)
+		if 'attachments' in item:
+			if 'photo' in item['attachments'][0]:
+				img_sizes = item['attachments'][0]['photo']['sizes']
+				img_url = next(x for x in img_sizes if x['type'] == 'x')['url']
+				bot.send_photo(CHANNEL_NAME, img_url)			
+		if 'text' in item:
+			text = item['text']
+			bot.send_message(CHANNEL_NAME, text, disable_web_page_preview=True)		
 		time.sleep(1)
 	return
 
 def check_new_posts_vk():
 	logging.info('[VK] Started scanning for new posts')
-	with open(FILENAME_VK, 'rt') as file:
-		last_id = int(file.read())
-		if last_id is None:
-			logging.error('Could not read from storage. Skipped iteration.')
-			return
-		logging.info('Last ID (VK) = {!s}'.format(last_id))
 	try:
 		feed = get_data()
 		if feed is not None:
 			entries = feed['response']
-			if 'is_pinned' in entries['items'][0]:
-				wall_posts = entries['items'][1:]
-			else:
-				wall_posts = entries['items']
-			send_new_posts(wall_posts, last_id)
-			new_last_id = wall_posts[0]['id']		
-			with open(FILENAME_VK, 'wt') as file:
-				file.write(str(new_last_id))
-			logging.info('New last_id (VK) is {!s}'.format(new_last_id))
+			if entries['items'] != []:					
+				if 'is_pinned' in entries['items'][0]:
+					wall_posts = entries['items'][1:]
+				else:
+					wall_posts = entries['items']
+				send_new_posts(wall_posts)
+				new_last_id = wall_posts[0]['id']		
+				logging.info('New last_id (VK) is {!s}'.format(new_last_id))
 	except Exception as ex:
 		logging.error('Exception of type {!s} in check_new_post():{!s}').format(type(ex).__name__,str(ex))
 		pass
@@ -81,7 +74,7 @@ if __name__ == '__main__':
 		while True:
 			check_new_posts_vk()
 			logging.info('[App] Script went to sleep.')
-			time.sleep(60 * 4)
+			time.sleep(PERIOD_CHECK_TIME)
 	else:
 		check_new_posts_vk()
 	logging.info('[App] Script exited. \n')
